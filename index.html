@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aprende y Relaciona con la Letra T - PWA Educational Game</title>
+
+    <!-- Theme & App Metadata -->
+    <meta name="theme-color" content="#0d9488">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Aprende T">
+    <meta name="description" content="Juego educativo interactivo para niños: Aprende y relaciona palabras y objetos con la letra T.">
+
+    <!-- Embedded Manifest JSON for PWA Support on GitHub Pages -->
+    <link rel="manifest" href='data:application/manifest+json,{
+        "name": "Aprende y Relaciona con la Letra T",
+        "short_name": "Aprende T",
+        "description": "Juego educativo interactivo para aprender la letra T",
+        "start_url": "./index.html",
+        "display": "standalone",
+        "background_color": "#e0f2fe",
+        "theme_color": "#0d9488",
+        "orientation": "any",
+        "icons": [
+            {
+                "src": "data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230d9488%22/><text x=%2250%22 y=%2272%22 font-size=%2265%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22%23ffffff%22 font-family=%22sans-serif%22>T</text></svg>",
+                "sizes": "192x192 512x512",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+            }
+        ]
+    }'>
+
+    <!-- Tailwind CSS CDN & Fredoka Google Font -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Activity 1 Styles */
+        .chalkboard {
+            background: linear-gradient(135deg, #1e3a2f 0%, #11221b 100%);
+            border: 10px solid #8B4513;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 10px 25px rgba(0,0,0,0.3);
+        }
+        @media (min-width: 640px) {
+            .chalkboard {
+                border-width: 12px;
+            }
+        }
+        .grayscale-fig {
+            filter: grayscale(100%) brightness(95%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .grayscale-fig:hover {
+            filter: grayscale(40%) brightness(105%);
+            transform: scale(1.06);
+        }
+        .colorized-fig {
+            filter: grayscale(0%) brightness(100%) drop-shadow(0 6px 8px rgba(0,0,0,0.25));
+            transform: scale(1.1);
+        }
+
+        /* Activity 2 Styles */
+        .bw-filter {
+            filter: grayscale(100%) contrast(140%) brightness(105%);
+            transition: filter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.4s ease;
+        }
+        .color-matched {
+            filter: grayscale(0%) contrast(100%) brightness(100%);
+            transform: scale(1.1);
+        }
+        .item-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 2px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.03);
+            transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            position: relative;
+        }
+        .item-card.selected-word {
+            border-color: #0284c7;
+            background-color: #f0f9ff;
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25);
+            transform: scale(1.02);
+        }
+        .item-card.matched-card {
+            border-color: #10b981;
+            background-color: #ecfdf5;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.15);
+        }
+        .anchor-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #0284c7;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.4);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .anchor-dot.matched {
+            background-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4);
+        }
+        .connecting-line {
+            stroke: #0284c7;
+            stroke-width: 5;
+            stroke-linecap: round;
+            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.2));
+            transition: stroke 0.3s ease;
+        }
+        .connecting-line.active-drag {
+            stroke: #f59e0b;
+            stroke-dasharray: 8 6;
+            animation: dash 1s linear infinite;
+        }
+        .connecting-line.matched-line {
+            stroke: #10b981;
+            stroke-width: 6;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -14; }
+        }
+        @keyframes bounce-short {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-bounce-short {
+            animation: bounce-short 0.6s ease infinite;
+        }
+    </style>
+</head>
+<body class="bg-sky-100 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none">
+
+    <div id="master-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div id="master-modal-content" class="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl text-center border-4 border-amber-400">
+            <div id="master-modal-icon" class="text-6xl mb-3 animate-bounce">🐯✨</div>
+            <h2 id="master-modal-title" class="text-2xl sm:text-3xl font-extrabold text-amber-900 mb-3">¡Aprende y Relaciona con la T!</h2>
+            <p id="master-modal-text" class="text-base sm:text-lg text-slate-600 mb-6 leading-relaxed">
+                Completa la <b>Primera Actividad</b> seleccionando las figuras que empiezan con la letra T. ¡Si superas la prueba sin demasiadas fallas, pasarás a la Segunda Actividad!
+            </p>
+            <button id="master-modal-btn" onclick="handleMasterModalAction()" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold text-lg sm:text-xl rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer">
+                Comenzar Aventura 🚀
+            </button>
+        </div>
+    </div>
+
+    <div id="activity-1-container" class="w-full max-w-5xl flex flex-col items-center justify-between min-h-[90vh]">
+        <header class="w-full bg-white/90 backdrop-blur-md rounded-3xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4 border-b-4 border-amber-400">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-400 text-amber-950 font-bold text-3xl w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transform -rotate-3">
+                    T
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-amber-900">Actividad 1: Letra T</h1>
+                    <p class="text-xs sm:text-sm text-slate-600">Presiona las figuras que empiezan con la T</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 sm:gap-4 bg-amber-50 px-4 sm:px-5 py-2 rounded-2xl border-2 border-amber-200 shadow-sm text-center">
+                <div>
+                    <span class="block text-[10px] sm:text-xs uppercase tracking-wider text-amber-800 font-semibold">Ronda</span>
+                    <span id="act1-round-display" class="text-base sm:text-xl font-bold text-amber-900">1 / 5</span>
+                </div>
+                <div class="h-7 w-px bg-amber-200"></div>
+                <div>
+                    <span class="block text-[10px] sm:text-xs uppercase tracking-wider text-emerald-800 font-semibold">Aciertos</span>
+                    <span id="act1-score-display" class="text-base sm:text-xl font-bold text-emerald-700">0</span>
+                </div>
+                <div class="h-7 w-px bg-amber-200"></div>
+                <div>
+                    <span class="block text-[10px] sm:text-xs uppercase tracking-wider text-rose-800 font-semibold">Fallas</span>
+                    <span id="act1-fails-display" class="text-base sm:text-xl font-bold text-rose-600">0 / 4</span>
+                </div>
+            </div>
+
+            <button onclick="speakInstructionAct1()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-2xl shadow-md transition transform active:scale-95 flex items-center gap-2 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                <span class="hidden sm:inline">Escuchar instrucción</span>
+            </button>
+        </header>
+
+        <main class="w-full my-4 flex-1 flex flex-col justify-center items-center">
+            <div class="chalkboard w-full rounded-3xl p-4 sm:p-6 shadow-2xl relative">
+                <div class="absolute top-3 left-6 text-emerald-100/40 font-bold text-sm sm:text-lg tracking-widest uppercase">Pizarrón Mágico de la Letra T</div>
+                <div id="figures-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6"></div>
+            </div>
+        </main>
+
+        <footer class="w-full bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-md text-center flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div id="act1-feedback-msg" class="text-base sm:text-lg font-bold text-amber-800 animate-bounce-short">
+                Escucha la instrucción y toca las figuras correctas.
+            </div>
+            <div>
+                <button onclick="resetAct1Game()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl shadow transition text-sm cursor-pointer">
+                    Reiniciar Actividad
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <div id="activity-2-container" class="w-full max-w-6xl flex flex-col justify-between min-h-[90vh] hidden">
+        <header class="w-full bg-white/90 backdrop-blur-md border-b border-slate-200 py-2.5 px-4 sm:px-8 sticky top-0 z-40 shadow-sm rounded-2xl">
+            <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <span class="text-2xl sm:text-3xl">✏️🎨</span>
+                    <h1 class="text-base sm:text-2xl font-extrabold bg-gradient-to-r from-teal-600 via-sky-600 to-amber-500 bg-clip-text text-transparent truncate">
+                        Actividad 2: Relaciona y Colorea con la T
+                    </h1>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <div id="act2-round-badge" class="px-3 py-1 rounded-full bg-sky-100 border border-sky-300 text-sky-800 font-bold text-xs sm:text-sm shadow-inner">
+                        Ronda 1 de 3
+                    </div>
+                    <div id="act2-fails-badge" class="px-3 py-1 rounded-full bg-rose-100 border border-rose-300 text-rose-800 font-bold text-xs sm:text-sm shadow-inner">
+                        ❌ Fallas: <span id="act2-fail-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 w-full mx-auto p-2 sm:p-4 md:p-6 flex flex-col justify-center relative">
+            <div class="w-full bg-amber-50/90 border border-amber-200 rounded-xl p-2 sm:p-3 mb-3 sm:mb-4 text-center text-xs sm:text-sm text-amber-900 font-medium shadow-sm flex items-center justify-center gap-2">
+                <span>👉</span>
+                <span>Selecciona o arrastra una línea desde la <b>palabra</b> hacia su <b>figura</b>.</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 sm:gap-6 mb-2 sm:mb-3">
+                <div class="text-center font-bold text-xs sm:text-base text-sky-800 bg-sky-100/80 py-1.5 sm:py-2 rounded-xl border border-sky-200 shadow-sm">
+                    📝 Palabras con T
+                </div>
+                <div class="text-center font-bold text-xs sm:text-base text-teal-800 bg-teal-100/80 py-1.5 sm:py-2 rounded-xl border border-teal-200 shadow-sm">
+                    🖼️ Figuras
+                </div>
+            </div>
+
+            <div id="act2-game-board" class="relative w-full">
+                <svg id="act2-svg-overlay" class="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"></svg>
+                <div class="grid grid-cols-2 gap-3 sm:gap-6 relative z-10">
+                    <div id="act2-words-col" class="flex flex-col justify-between gap-2 sm:gap-3"></div>
+                    <div id="act2-figures-col" class="flex flex-col justify-between gap-2 sm:gap-3"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Inline Service Worker setup for GitHub Pages PWA offline caching
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    const CACHE_NAME = 'aprende-letra-t-v1';
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then((cache) => {
+                                return cache.addAll(['./', './index.html']);
+                            })
+                        );
+                        self.skipWaiting();
+                    });
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request).then((response) => {
+                                return response || fetch(event.request);
+                            })
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const blobURL = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(blobURL).catch(err => console.log('SW registration note:', err));
+            });
+        }
+    </script>
+
+    <script>
+        /* ==========================================
+           GLOBAL APP STATE & MASTER CONTROLLER
+           ========================================== */
+        let currentGlobalPhase = 1;
+
+        function speakLatinSpanish(text, callback) {
+            if (!('speechSynthesis' in window)) {
+                if (callback) callback();
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-MX';
+            utterance.rate = 0.88;
+            utterance.pitch = 1.05;
+            
+            const voices = window.speechSynthesis.getVoices();
+            const esMxVoice = voices.find(v => v.lang.includes('es-MX') || v.lang.includes('es-US') || v.lang.includes('es-419'));
+            if (esMxVoice) utterance.voice = esMxVoice;
+
+            utterance.onend = function() {
+                if (callback) callback();
+            };
+            window.speechSynthesis.saveInstance = utterance;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+
+        function showMasterModal(title, text, btnText, iconEmoji, actionCallback) {
+            const modal = document.getElementById('master-modal');
+            document.getElementById('master-modal-title').innerText = title;
+            document.getElementById('master-modal-text').innerHTML = text;
+            document.getElementById('master-modal-btn').innerText = btnText;
+            document.getElementById('master-modal-icon').innerText = iconEmoji;
+            window._modalAction = actionCallback;
+            modal.classList.remove('hidden');
+        }
+
+        function hideMasterModal() {
+            document.getElementById('master-modal').classList.add('hidden');
+        }
+
+        function handleMasterModalAction() {
+            hideMasterModal();
+            if (window._modalAction) {
+                window._modalAction();
+            }
+        }
+
+        window.onload = function() {
+            initAct1();
+        };
+
+
+        /* ==========================================
+           ACTIVIDAD 1 LOGIC
+           ========================================== */
+        const allFiguresAct1 = [
+            { id: 'tuna', name: 'Tuna', startsWithT: true, color: '#22c55e', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="100" cy="95" rx="55" ry="65" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="80" cy="65" r="3" fill="#1e293b"/><circle cx="120" cy="70" r="3" fill="#1e293b"/><circle cx="70" cy="100" r="3" fill="#1e293b"/><circle cx="130" cy="105" r="3" fill="#1e293b"/><circle cx="100" cy="120" r="3" fill="#1e293b"/><circle cx="95" cy="85" r="3" fill="#1e293b"/><path d="M85,32 Q100,20 115,32 Q100,40 85,32 Z" fill="#ef4444" stroke="#1e293b" stroke-width="4"/></svg>` },
+            { id: 'taza', name: 'Taza', startsWithT: true, color: '#f43f5e', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M40,70 Q40,150 100,150 Q160,150 160,70 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M160,85 Q190,85 190,110 Q190,135 160,135" fill="none" stroke="#1e293b" stroke-width="6" stroke-linecap="round"/><ellipse cx="100" cy="70" rx="60" ry="15" fill="#94a3b8" stroke="#1e293b" stroke-width="6"/><path d="M85,45 Q90,30 95,40 T105,30" fill="none" stroke="#64748b" stroke-width="4" stroke-linecap="round"/><ellipse cx="100" cy="155" rx="75" ry="10" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/></svg>` },
+            { id: 'tetera', name: 'Tetera', startsWithT: true, color: '#ec4899', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="110" cy="110" rx="60" ry="45" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M110,20 Q60,20 60,70" fill="none" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/><path d="M55,100 L25,80 Q20,105 45,115 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><ellipse cx="110" cy="65" rx="35" ry="10" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="110" cy="50" r="7" fill="#1e293b"/></svg>` },
+            { id: 'tijeras', name: 'Tijeras', startsWithT: true, color: '#6366f1', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M70,110 L150,30" stroke="var(--fig-color, #cbd5e1)" stroke-width="16" stroke-linecap="round"/><path d="M70,110 L150,30" stroke="#1e293b" stroke-width="16" stroke-linecap="round" fill="none"/><path d="M130,110 L50,30" stroke="var(--fig-color, #cbd5e1)" stroke-width="16" stroke-linecap="round"/><path d="M130,110 L50,30" stroke="#1e293b" stroke-width="16" stroke-linecap="round" fill="none"/><circle cx="50" cy="135" r="22" fill="none" stroke="var(--fig-color, #cbd5e1)" stroke-width="10"/><circle cx="50" cy="135" r="22" fill="none" stroke="#1e293b" stroke-width="6"/><circle cx="150" cy="135" r="22" fill="none" stroke="var(--fig-color, #cbd5e1)" stroke-width="10"/><circle cx="150" cy="135" r="22" fill="none" stroke="#1e293b" stroke-width="6"/><circle cx="100" cy="70" r="6" fill="#1e293b"/></svg>` },
+            { id: 'tortuga', name: 'Tortuga', startsWithT: true, color: '#10b981', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M40,110 Q100,30 160,110 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="165" cy="95" r="22" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="172" cy="90" r="4" fill="#1e293b"/><rect x="55" y="110" width="20" height="25" rx="8" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><rect x="125" y="110" width="20" height="25" rx="8" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><path d="M70,80 L130,80 M100,50 L100,110" stroke="#1e293b" stroke-width="4"/></svg>` },
+            { id: 'tulipan', name: 'Tulipán', startsWithT: true, color: '#f43f5e', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M100,100 Q100,160 100,170" fill="none" stroke="#22c55e" stroke-width="8" stroke-linecap="round"/><path d="M100,145 Q60,130 50,110 Q80,120 100,145 Z" fill="#22c55e" stroke="#1e293b" stroke-width="4"/><path d="M100,145 Q140,130 150,110 Q120,120 100,145 Z" fill="#22c55e" stroke="#1e293b" stroke-width="4"/><path d="M60,60 Q60,110 100,110 Q140,110 140,60 Q120,80 100,40 Q80,80 60,60 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/></svg>` },
+            { id: 'tucan', name: 'Tucán', startsWithT: true, color: '#8b5cf6', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="90" cy="100" rx="40" ry="55" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="80" cy="70" r="10" fill="#ffffff" stroke="#1e293b" stroke-width="4"/><circle cx="82" cy="70" r="4" fill="#1e293b"/><path d="M100,70 Q165,75 155,110 Q125,115 100,95 Z" fill="#f97316" stroke="#1e293b" stroke-width="5"/></svg>` },
+            { id: 'taco', name: 'Taco', startsWithT: true, color: '#f59e0b', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M30,110 Q100,20 170,110 Q100,150 30,110 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M40,105 Q100,45 160,105 Q130,80 100,90 Q70,80 40,105 Z" fill="#22c55e" stroke="#1e293b" stroke-width="4"/></svg>` },
+            { id: 'tapete', name: 'Tapete', startsWithT: true, color: '#06b6d4', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><rect x="30" y="60" width="140" height="70" rx="8" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M20,65 L30,65 M20,80 L30,80 M20,95 L30,95 M20,110 L30,110 M20,125 L30,125" stroke="#1e293b" stroke-width="4"/><path d="M170,65 L180,65 M170,80 L180,80 M170,95 L180,95 M170,110 L180,110 M170,125 L180,125" stroke="#1e293b" stroke-width="4"/><path d="M50,60 L100,130 M150,60 L100,130" stroke="#1e293b" stroke-width="4"/></svg>` },
+            { id: 'telefono', name: 'Teléfono', startsWithT: true, color: '#3b82f6', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M40,90 Q100,40 160,90 L150,130 Q100,140 50,130 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="100" cy="105" r="20" fill="#ffffff" stroke="#1e293b" stroke-width="5"/><path d="M50,80 Q100,20 150,80" fill="none" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/></svg>` },
+            { id: 'tesoro', name: 'Tesoro', startsWithT: true, color: '#eab308', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><rect x="40" y="90" width="120" height="60" rx="6" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M40,90 Q100,40 160,90 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="100" cy="105" r="8" fill="#1e293b"/><rect x="96" y="110" width="8" height="15" fill="#1e293b"/></svg>` },
+            { id: 'tiburon', name: 'Tiburón', startsWithT: true, color: '#0ea5e9', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M20,110 Q100,40 180,90 Q100,130 20,110 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M70,75 L60,30 L95,65" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="150" cy="80" r="5" fill="#1e293b"/></svg>` },
+            { id: 'tigre', name: 'Tigre', startsWithT: true, color: '#f97316', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><circle cx="100" cy="100" r="55" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M60,55 L45,25 L75,45 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><path d="M140,55 L155,25 L125,45 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><path d="M80,75 Q100,85 120,75" fill="none" stroke="#1e293b" stroke-width="5"/></svg>` },
+            { id: 'tomate', name: 'Tomate', startsWithT: true, color: '#ef4444', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="100" cy="100" rx="70" ry="60" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M85,40 Q100,15 115,40 Q125,30 135,40 Q120,55 100,50 Q80,55 65,40 Q75,30 85,40 Z" fill="#22c55e" stroke="#1e293b" stroke-width="4"/></svg>` },
+            { id: 'topo', name: 'Topo', startsWithT: true, color: '#78350f', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="100" cy="110" rx="55" ry="45" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><ellipse cx="100" cy="115" rx="20" ry="12" fill="#fbcfe8" stroke="#1e293b" stroke-width="4"/><circle cx="80" cy="90" r="5" fill="#1e293b"/><circle cx="120" cy="90" r="5" fill="#1e293b"/></svg>` },
+            { id: 'tren', name: 'Tren', startsWithT: true, color: '#eab308', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><rect x="30" y="60" width="80" height="70" rx="10" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><rect x="120" y="80" width="50" height="50" rx="8" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="60" cy="140" r="15" fill="#475569" stroke="#1e293b" stroke-width="5"/><circle cx="135" cy="140" r="15" fill="#475569" stroke="#1e293b" stroke-width="5"/><path d="M10,105 L30,105" stroke="#1e293b" stroke-width="6"/></svg>` },
+            { id: 'arana', name: 'Araña', startsWithT: false, color: '#64748b', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><circle cx="100" cy="100" r="35" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M65,80 Q25,50 15,90 M65,100 Q20,110 25,140 M65,120 Q35,150 55,170" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/><path d="M135,80 Q175,50 185,90 M135,100 Q180,110 175,140 M135,120 Q165,150 145,170" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/></svg>` },
+            { id: 'uvas', name: 'Uvas', startsWithT: false, color: '#a855f7', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><circle cx="100" cy="80" r="18" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="82" cy="105" r="18" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="118" cy="105" r="18" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="100" cy="130" r="18" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><path d="M100,62 Q100,40 115,30" fill="none" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/></svg>` },
+            { id: 'abeja', name: 'Abeja', startsWithT: false, color: '#eab308', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="100" cy="100" rx="45" ry="32" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M80,68 Q90,40 105,60" fill="none" stroke="#1e293b" stroke-width="5"/><path d="M70,68 Q50,40 75,35" fill="none" stroke="#94a3b8" stroke-width="5"/><path d="M110,68 Q130,40 105,35" fill="none" stroke="#94a3b8" stroke-width="5"/></svg>` },
+            { id: 'sol', name: 'Sol', startsWithT: false, color: '#facc15', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><circle cx="100" cy="100" r="38" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M100,30 L100,48 M100,152 L100,170 M30,100 L48,100 M152,100 L170,100" stroke="#1e293b" stroke-width="6" stroke-linecap="round"/></svg>` },
+            { id: 'estrella', name: 'Estrella', startsWithT: false, color: '#f59e0b', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M100,25 L122,70 L172,77 L136,112 L145,162 L100,138 L55,162 L64,112 L28,77 L78,70 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/></svg>` },
+            { id: 'manzana', name: 'Manzana', startsWithT: false, color: '#dc2626', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><path d="M100,60 Q130,30 160,70 Q170,130 100,150 Q30,130 40,70 Q70,30 100,60 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M100,60 Q105,35 120,25" fill="none" stroke="#78350f" stroke-width="5" stroke-linecap="round"/></svg>` },
+            { id: 'pato', name: 'Pato', startsWithT: false, color: '#facc15', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><ellipse cx="90" cy="115" rx="45" ry="30" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="125" cy="75" r="22" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><path d="M140,75 Q175,80 165,92 Q140,92 135,80 Z" fill="#f97316" stroke="#1e293b" stroke-width="4"/><circle cx="128" cy="70" r="4" fill="#1e293b"/></svg>` },
+            { id: 'pelota', name: 'Pelota', startsWithT: false, color: '#3b82f6', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><circle cx="100" cy="100" r="55" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M50,80 Q100,120 150,80 M50,120 Q100,80 150,120" fill="none" stroke="#1e293b" stroke-width="5"/></svg>` },
+            { id: 'casa', name: 'Casa', startsWithT: false, color: '#f97316', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><rect x="50" y="90" width="100" height="65" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><path d="M40,90 L100,35 L160,90 Z" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><rect x="85" y="115" width="30" height="40" fill="#78350f" stroke="#1e293b" stroke-width="4"/></svg>` },
+            { id: 'oso', name: 'Oso', startsWithT: false, color: '#b45309', svg: `<svg viewBox="0 0 200 180" class="w-full h-24 sm:h-28 object-contain"><circle cx="100" cy="100" r="50" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="6"/><circle cx="60" cy="55" r="18" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><circle cx="140" cy="55" r="18" fill="var(--fig-color, #cbd5e1)" stroke="#1e293b" stroke-width="5"/><ellipse cx="100" cy="112" rx="20" ry="14" fill="#fde68a" stroke="#1e293b" stroke-width="4"/><circle cx="100" cy="105" r="6" fill="#1e293b"/></svg>` }
+        ];
+
+        let act1Round = 1;
+        const act1TotalRounds = 5;
+        let act1Score = 0;
+        let act1Fails = 0;
+        const act1MaxFails = 4;
+        let act1RoundFigures = [];
+        let act1PendingTFigures = [];
+        let act1UsedTFigures = [];
+
+        function initAct1() {
+            currentGlobalPhase = 1;
+            document.getElementById('activity-1-container').classList.remove('hidden');
+            document.getElementById('activity-2-container').classList.add('hidden');
+            act1Round = 1;
+            act1Score = 0;
+            act1Fails = 0;
+            act1UsedTFigures = [];
+            startAct1Round();
+        }
+
+        function speakInstructionAct1() {
+            speakLatinSpanish("PRESIONA LA FIGURA QUE EMPIEZA CON LA LETRA T");
+        }
+
+        function startAct1Round() {
+            const tFigures = allFiguresAct1.filter(f => f.startsWithT);
+            const nonTFigures = allFiguresAct1.filter(f => !f.startsWithT);
+
+            let availableT = tFigures.filter(f => !act1UsedTFigures.includes(f.id));
+            if (availableT.length < 4) {
+                act1UsedTFigures = [];
+                availableT = tFigures;
+            }
+
+            const selectedT = shuffleArray([...availableT]).slice(0, 4);
+            selectedT.forEach(f => act1UsedTFigures.push(f.id));
+
+            const selectedNonT = shuffleArray([...nonTFigures]).slice(0, 4);
+
+            act1RoundFigures = shuffleArray([...selectedT, ...selectedNonT]);
+            act1PendingTFigures = [...selectedT];
+
+            renderAct1Board();
+            updateAct1Stats();
+
+            setTimeout(() => {
+                speakInstructionAct1();
+            }, 400);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function renderAct1Board() {
+            const grid = document.getElementById('figures-grid');
+            grid.innerHTML = '';
+
+            act1RoundFigures.forEach((fig, index) => {
+                const card = document.createElement('div');
+                card.id = `fig-card-${index}`;
+                card.className = `bg-white/90 backdrop-blur rounded-2xl p-2 sm:p-4 flex items-center justify-center cursor-pointer shadow-md hover:shadow-xl transition transform hover:-translate-y-1 border-4 border-amber-200 relative aspect-square`;
+                card.onclick = () => handleAct1FigureClick(fig, index);
+
+                card.innerHTML = `
+                    <div id="svg-container-${index}" class="w-full grayscale-fig flex items-center justify-center py-2" style="--fig-color: #cbd5e1;">
+                        ${fig.svg}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function handleAct1FigureClick(fig, index) {
+            const svgContainer = document.getElementById(`svg-container-${index}`);
+            const feedbackMsg = document.getElementById('act1-feedback-msg');
+
+            if (fig.startsWithT) {
+                if (svgContainer.classList.contains('colorized-fig')) return;
+
+                svgContainer.classList.remove('grayscale-fig');
+                svgContainer.classList.add('colorized-fig');
+                svgContainer.style.setProperty('--fig-color', fig.color);
+
+                act1Score++;
+                updateAct1Stats();
+
+                act1PendingTFigures = act1PendingTFigures.filter(f => f.id !== fig.id);
+
+                const praises = [
+                    `${fig.name.toUpperCase()}, LO HAS HECHO BIEN`,
+                    "EXCELENTE",
+                    "MUY BIEN"
+                ];
+                const randomPraise = praises[Math.floor(Math.random() * praises.length)];
+
+                feedbackMsg.innerText = `¡Correcto! ${fig.name} empieza con T.`;
+                feedbackMsg.className = "text-base sm:text-lg font-bold text-emerald-600 animate-bounce-short";
+
+                speakLatinSpanish(randomPraise, () => {
+                    if (act1PendingTFigures.length === 0) {
+                        setTimeout(advanceAct1Round, 800);
+                    }
+                });
+
+            } else {
+                act1Fails++;
+                updateAct1Stats();
+
+                feedbackMsg.innerText = "¡Ops! Inténtalo nuevamente.";
+                feedbackMsg.className = "text-base sm:text-lg font-bold text-rose-600 animate-bounce-short";
+
+                const card = document.getElementById(`fig-card-${index}`);
+                card.classList.add('animate-pulse');
+                setTimeout(() => card.classList.remove('animate-pulse'), 500);
+
+                speakLatinSpanish("INTÉNTALO NUEVAMENTE");
+            }
+        }
+
+        function advanceAct1Round() {
+            if (act1Round < act1TotalRounds) {
+                act1Round++;
+                speakLatinSpanish(`¡Muy bien! Pasamos a la ronda ${act1Round}`, () => {
+                    startAct1Round();
+                });
+            } else {
+                evaluateAct1Completion();
+            }
+        }
+
+        function evaluateAct1Completion() {
+            if (act1Fails >= act1MaxFails) {
+                showMasterModal(
+                    "¡Actividad 1 No Superada!",
+                    `Acumulaste <b>${act1Fails}</b> fallas (el límite es ${act1MaxFails - 1}). Vamos a repetir esta actividad para practicar juntos. 💪`,
+                    "Repetir Actividad 1 🔄",
+                    "🔁",
+                    () => { initAct1(); }
+                );
+                speakLatinSpanish("Has acumulado cuatro fallas o más. Vamos a repetir la actividad para practicar juntos.");
+            } else {
+                showMasterModal(
+                    "¡Excelente Trabajo en la Actividad 1!",
+                    `¡Completaste las 5 rondas con sólo <b>${act1Fails}</b> falla(s)! Pasamos de inmediato a la <b>Segunda Actividad</b>. 🎉`,
+                    "Comenzar Actividad 2 🚀",
+                    "🏆",
+                    () => { initAct2(); }
+                );
+                speakLatinSpanish("¡Felicidades! Pasamos a la segunda actividad.");
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
+            }
+        }
+
+        function updateAct1Stats() {
+            document.getElementById('act1-round-display').innerText = `${act1Round} / ${act1TotalRounds}`;
+            document.getElementById('act1-score-display').innerText = act1Score;
+            document.getElementById('act1-fails-display').innerText = `${act1Fails} / ${act1MaxFails}`;
+        }
+
+        function resetAct1Game() {
+            initAct1();
+        }
+
+
+        /* ==========================================
+           ACTIVIDAD 2 LOGIC
+           ========================================== */
+        const allItemsAct2 = [
+            { id: 'tiburon', word: 'Tiburón', spokenName: 'El tiburón', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M10,50 Q25,20 60,30 Q80,20 90,40 Q75,50 90,65 Q70,60 50,75 Q25,80 10,50 Z M45,33 Q55,10 65,30 Z M70,42 A3,3 0 1,0 70,48 A3,3 0 1,0 70,42 M55,55 Q65,60 75,52" fill="#38bdf8" stroke="#0284c7" stroke-width="3" stroke-linejoin="round"/></svg>` },
+            { id: 'tigre', word: 'Tigre', spokenName: 'El tigre', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="35" fill="#fb923c" stroke="#ea580c" stroke-width="3"/><circle cx="35" cy="42" r="5" fill="#fff"/><circle cx="35" cy="42" r="2" fill="#000"/><circle cx="65" cy="42" r="5" fill="#fff"/><circle cx="65" cy="42" r="2" fill="#000"/><polygon points="50,52 44,60 56,60" fill="#000"/><path d="M50,60 Q40,70 32,62 M50,60 Q60,70 68,62" fill="none" stroke="#000" stroke-width="3"/><path d="M20,35 L35,40 M15,50 L30,50 M80,35 L65,40 M85,50 L70,50 M50,18 L50,30 M38,22 L44,32 M62,22 L56,32" stroke="#000" stroke-width="3" stroke-linecap="round"/></svg>` },
+            { id: 'tijeras', word: 'Tijeras', spokenName: 'Las tijeras', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="30" cy="75" r="14" fill="none" stroke="#e11d48" stroke-width="5"/><circle cx="70" cy="75" r="14" fill="none" stroke="#e11d48" stroke-width="5"/><path d="M38,64 L75,20 Q80,15 70,15 L45,55" fill="#94a3b8" stroke="#475569" stroke-width="2"/><path d="M62,64 L25,20 Q20,15 30,15 L55,55" fill="#cbd5e1" stroke="#475569" stroke-width="2"/><circle cx="50" cy="53" r="4" fill="#475569"/></svg>` },
+            { id: 'tomate', word: 'Tomate', spokenName: 'El tomate', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="55" r="35" fill="#ef4444" stroke="#dc2626" stroke-width="3"/><path d="M50,22 Q45,10 50,5 Q55,10 50,22 Z M50,22 Q35,15 25,22 Q40,26 50,22 M50,22 Q65,15 75,22 Q60,26 50,22" fill="#22c55e" stroke="#15803d" stroke-width="2"/><circle cx="38" cy="42" r="5" fill="#fca5a5" opacity="0.6"/></svg>` },
+            { id: 'topo', word: 'Topo', spokenName: 'El topo', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M25,85 Q20,40 50,30 Q80,40 75,85 Z" fill="#78350f" stroke="#451a03" stroke-width="3"/><ellipse cx="50" cy="52" rx="8" ry="6" fill="#fbcfe8" stroke="#db2777" stroke-width="2"/><circle cx="38" cy="42" r="3" fill="#000"/><circle cx="62" cy="42" r="3" fill="#000"/><path d="M30,85 Q50,75 70,85 Q50,95 30,85" fill="#a16207"/><path d="M50,15 L50,28 M40,28 L60,28" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/></svg>` },
+            { id: 'tortuga', word: 'Tortuga', spokenName: 'La tortuga', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="50" rx="32" ry="25" fill="#15803d" stroke="#166534" stroke-width="3"/><path d="M50,25 L65,37 L65,63 L50,75 L35,63 L35,37 Z" fill="#22c55e" stroke="#166534" stroke-width="2"/><path d="M78,50 Q92,40 88,58 Q78,60 78,50" fill="#4ade80" stroke="#166534" stroke-width="2"/><circle cx="84" cy="48" r="2" fill="#000"/><path d="M25,65 Q18,80 28,80 M75,65 Q82,80 72,80 M25,35 Q18,20 28,20 M75,35 Q82,20 72,20" stroke="#166534" stroke-width="4" stroke-linecap="round"/></svg>` },
+            { id: 'tucan', word: 'Tucán', spokenName: 'El tucán', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M35,30 Q35,75 55,85 Q65,60 55,30 Z" fill="#1e293b" stroke="#0f172a" stroke-width="3"/><circle cx="42" cy="35" r="14" fill="#fff"/><circle cx="40" cy="32" r="3" fill="#000"/><path d="M48,25 Q88,20 90,45 Q65,50 48,42 Z" fill="#f59e0b" stroke="#d97706" stroke-width="2"/><path d="M70,22 Q88,20 90,45 Q78,40 70,22 Z" fill="#ef4444"/><path d="M25,85 L70,85" stroke="#78350f" stroke-width="5" stroke-linecap="round"/></svg>` },
+            { id: 'tulipan', word: 'Tulipán', spokenName: 'El tulipán', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50,50 L50,90" stroke="#22c55e" stroke-width="5" stroke-linecap="round"/><path d="M50,75 Q25,70 30,55 Q45,65 50,75 M50,80 Q75,75 70,60 Q55,70 50,80" fill="#4ade80" stroke="#166534" stroke-width="2"/><path d="M30,30 Q30,55 50,60 Q70,55 70,30 Q60,40 50,25 Q40,40 30,30 Z" fill="#ec4899" stroke="#be185d" stroke-width="3"/></svg>` },
+            { id: 'tuna', word: 'Tuna', spokenName: 'La tuna', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="55" rx="28" ry="33" fill="#15803d" stroke="#166534" stroke-width="3"/><ellipse cx="50" cy="24" rx="14" ry="6" fill="#f43f5e" stroke="#be123c" stroke-width="2"/><circle cx="38" cy="45" r="2" fill="#fef08a"/><circle cx="62" cy="48" r="2" fill="#fef08a"/><circle cx="45" cy="65" r="2" fill="#fef08a"/><circle cx="58" cy="72" r="2" fill="#fef08a"/><circle cx="32" cy="62" r="2" fill="#fef08a"/><path d="M38,45 L35,42 M62,48 L65,45 M45,65 L43,68 M58,72 L61,75" stroke="#a16207" stroke-width="2"/></svg>` },
+            { id: 'taco', word: 'Taco', spokenName: 'El taco', svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15,65 Q50,20 85,65 Z" fill="#fde047" stroke="#ca8a04" stroke-width="3"/><path d="M20,60 Q50,30 80,60" fill="none" stroke="#15803d" stroke-width="6" stroke-dasharray="6 4"/><path d="M25,63 Q50,35 75,63" fill="none" stroke="#ef4444" stroke-width="5" stroke-dasharray="8 5"/><path d="M12,65 Q50,90 88,65 Q50,75 12,65 Z" fill="#f59e0b" stroke="#d97706" stroke-width="3"/></svg>` }
+        ];
+
+        let act2CurrentRound = 1;
+        const act2TotalRounds = 3;
+        const act2ItemsPerRound = 5;
+
+        let act2RoundWords = [];
+        let act2RoundFigures = [];
+        let act2MatchedIds = [];
+        let act2SelectedWordId = null;
+        let act2TotalFails = 0;
+
+        let act2IsDragging = false;
+        let act2ActiveDragWordId = null;
+        let act2DragStartPos = { x: 0, y: 0 };
+
+        function initAct2() {
+            currentGlobalPhase = 3;
+            document.getElementById('activity-1-container').classList.add('hidden');
+            document.getElementById('activity-2-container').classList.remove('hidden');
+            act2CurrentRound = 1;
+            act2TotalFails = 0;
+            document.getElementById('act2-fail-count').innerText = act2TotalFails;
+            initAct2Round();
+        }
+
+        function initAct2Round() {
+            act2MatchedIds = [];
+            act2SelectedWordId = null;
+            document.getElementById('act2-round-badge').innerText = `Ronda ${act2CurrentRound} de ${act2TotalRounds}`;
+
+            const shuffledPool = [...allItemsAct2].sort(() => Math.random() - 0.5);
+            act2RoundWords = shuffledPool.slice(0, act2ItemsPerRound);
+            act2RoundFigures = [...act2RoundWords].sort(() => Math.random() - 0.5);
+
+            renderAct2Board();
+
+            window.removeEventListener('resize', updateAct2SvgOverlay);
+            window.addEventListener('resize', updateAct2SvgOverlay);
+            setTimeout(updateAct2SvgOverlay, 100);
+        }
+
+        function renderAct2Board() {
+            const wordsCol = document.getElementById('act2-words-col');
+            const figuresCol = document.getElementById('act2-figures-col');
+
+            wordsCol.innerHTML = '';
+            figuresCol.innerHTML = '';
+
+            act2RoundWords.forEach((item, index) => {
+                const wordCard = document.createElement('div');
+                wordCard.id = `card-word-${item.id}`;
+                wordCard.className = 'item-card h-14 sm:h-20 rounded-2xl px-3 sm:px-4 flex items-center justify-between cursor-pointer select-none';
+                wordCard.setAttribute('data-id', item.id);
+
+                wordCard.innerHTML = `
+                    <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
+                        <span class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-sky-100 text-sky-700 font-bold text-xs sm:text-sm flex items-center justify-center flex-shrink-0">${index + 1}</span>
+                        <span class="text-sm sm:text-xl font-bold text-slate-800 truncate">${item.word}</span>
+                    </div>
+                    <div id="anchor-word-${item.id}" class="anchor-dot flex-shrink-0"></div>
+                `;
+                wordCard.addEventListener('pointerdown', (e) => handleAct2WordPointerDown(e, item.id));
+                wordsCol.appendChild(wordCard);
+            });
+
+            act2RoundFigures.forEach((item) => {
+                const figCard = document.createElement('div');
+                figCard.id = `card-fig-${item.id}`;
+                figCard.className = 'item-card h-14 sm:h-20 rounded-2xl px-3 sm:px-4 flex items-center justify-between cursor-pointer select-none';
+                figCard.setAttribute('data-id', item.id);
+
+                figCard.innerHTML = `
+                    <div id="anchor-fig-${item.id}" class="anchor-dot flex-shrink-0"></div>
+                    <div class="flex items-center justify-center w-full h-full px-2">
+                        <div class="w-10 h-10 sm:w-16 sm:h-16 flex items-center justify-center bw-filter" id="fig-svg-${item.id}">
+                            ${item.svg}
+                        </div>
+                    </div>
+                `;
+                figCard.addEventListener('pointerup', (e) => handleAct2FigurePointerUp(e, item.id));
+                figCard.addEventListener('click', () => handleAct2FigureClick(item.id));
+                figuresCol.appendChild(figCard);
+            });
+
+            updateAct2SvgOverlay();
+        }
+
+        function handleAct2WordPointerDown(e, id) {
+            if (act2MatchedIds.includes(id)) return;
+            selectAct2Word(id);
+
+            act2IsDragging = true;
+            act2ActiveDragWordId = id;
+
+            const anchor = document.getElementById(`anchor-word-${id}`);
+            act2DragStartPos = getAct2ElementCenterInSvg(anchor);
+
+            window.addEventListener('pointermove', handleAct2PointerMove);
+            window.addEventListener('pointerup', handleAct2PointerUp);
+        }
+
+        function selectAct2Word(id) {
+            act2RoundWords.forEach(w => {
+                const card = document.getElementById(`card-word-${w.id}`);
+                if (card && !act2MatchedIds.includes(w.id)) {
+                    card.classList.remove('selected-word');
+                }
+            });
+
+            act2SelectedWordId = id;
+            const selectedCard = document.getElementById(`card-word-${id}`);
+            if (selectedCard) selectedCard.classList.add('selected-word');
+        }
+
+        function handleAct2PointerMove(e) {
+            if (!act2IsDragging || !act2ActiveDragWordId) return;
+
+            const boardRect = document.getElementById('act2-game-board').getBoundingClientRect();
+            const currentPos = {
+                x: e.clientX - boardRect.left,
+                y: e.clientY - boardRect.top
+            };
+
+            drawAct2ActiveDragLine(act2DragStartPos, currentPos);
+        }
+
+        function handleAct2PointerUp(e) {
+            if (!act2IsDragging) return;
+
+            const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+            if (elementUnder) {
+                const figCard = elementUnder.closest('[id^="card-fig-"]');
+                if (figCard) {
+                    const figureId = figCard.getAttribute('data-id');
+                    attemptAct2Connection(act2ActiveDragWordId, figureId);
+                }
+            }
+            stopAct2Dragging();
+        }
+
+        function handleAct2FigureClick(figureId) {
+            if (act2IsDragging) return;
+            if (act2SelectedWordId && !act2MatchedIds.includes(figureId)) {
+                attemptAct2Connection(act2SelectedWordId, figureId);
+            }
+        }
+
+        function handleAct2FigurePointerUp(e, figureId) {
+            if (act2IsDragging && act2ActiveDragWordId) {
+                attemptAct2Connection(act2ActiveDragWordId, figureId);
+                stopAct2Dragging();
+            }
+        }
+
+        function stopAct2Dragging() {
+            act2IsDragging = false;
+            act2ActiveDragWordId = null;
+            window.removeEventListener('pointermove', handleAct2PointerMove);
+            window.removeEventListener('pointerup', handleAct2PointerUp);
+            updateAct2SvgOverlay();
+        }
+
+        function attemptAct2Connection(wordId, figureId) {
+            if (act2MatchedIds.includes(wordId) || act2MatchedIds.includes(figureId)) return;
+
+            if (wordId === figureId) {
+                act2MatchedIds.push(wordId);
+                act2SelectedWordId = null;
+
+                const wordCard = document.getElementById(`card-word-${wordId}`);
+                const figCard = document.getElementById(`card-fig-${figureId}`);
+                const figSvg = document.getElementById(`fig-svg-${figureId}`);
+                const wordAnchor = document.getElementById(`anchor-word-${wordId}`);
+                const figAnchor = document.getElementById(`anchor-fig-${figureId}`);
+
+                if (wordCard) {
+                    wordCard.classList.remove('selected-word');
+                    wordCard.classList.add('matched-card');
+                }
+                if (figCard) figCard.classList.add('matched-card');
+                if (figSvg) {
+                    figSvg.classList.remove('bw-filter');
+                    figSvg.classList.add('color-matched');
+                }
+                if (wordAnchor) wordAnchor.classList.add('matched');
+                if (figAnchor) figAnchor.classList.add('matched');
+
+                const targetItem = allItemsAct2.find(i => i.id === wordId);
+                const praisePhrases = ["¡lo has hecho bien!", "¡adelante!", "¡muy bien!"];
+                const randomPraise = praisePhrases[Math.floor(Math.random() * praisePhrases.length)];
+                speakLatinSpanish(`${targetItem.spokenName}, ${randomPraise}`);
+
+                updateAct2SvgOverlay();
+
+                if (act2MatchedIds.length === act2ItemsPerRound) {
+                    confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+                    setTimeout(() => {
+                        if (act2CurrentRound < act2TotalRounds) {
+                            act2CurrentRound++;
+                            initAct2Round();
+                        } else {
+                            evaluateAct2Completion();
+                        }
+                    }, 1400);
+                }
+
+            } else {
+                act2TotalFails++;
+                document.getElementById('act2-fail-count').innerText = act2TotalFails;
+
+                const errorPhrases = ["¡Vuelve a intentarlo!", "No, no"];
+                speakLatinSpanish(errorPhrases[Math.floor(Math.random() * errorPhrases.length)]);
+
+                act2SelectedWordId = null;
+                act2RoundWords.forEach(w => {
+                    const card = document.getElementById(`card-word-${w.id}`);
+                    if (card && !act2MatchedIds.includes(w.id)) card.classList.remove('selected-word');
+                });
+
+                const figCard = document.getElementById(`card-fig-${figureId}`);
+                if (figCard) {
+                    figCard.classList.add('border-rose-400', 'bg-rose-50');
+                    setTimeout(() => figCard.classList.remove('border-rose-400', 'bg-rose-50'), 500);
+                }
+            }
+        }
+
+        function getAct2ElementCenterInSvg(elem) {
+            const svg = document.getElementById('act2-svg-overlay');
+            const svgRect = svg.getBoundingClientRect();
+            const elemRect = elem.getBoundingClientRect();
+
+            return {
+                x: (elemRect.left + elemRect.width / 2) - svgRect.left,
+                y: (elemRect.top + elemRect.height / 2) - svgRect.top
+            };
+        }
+
+        function updateAct2SvgOverlay() {
+            const svg = document.getElementById('act2-svg-overlay');
+            svg.innerHTML = '';
+
+            act2MatchedIds.forEach(id => {
+                const wordAnchor = document.getElementById(`anchor-word-${id}`);
+                const figAnchor = document.getElementById(`anchor-fig-${id}`);
+
+                if (wordAnchor && figAnchor) {
+                    const p1 = getAct2ElementCenterInSvg(wordAnchor);
+                    const p2 = getAct2ElementCenterInSvg(figAnchor);
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', p1.x);
+                    line.setAttribute('y1', p1.y);
+                    line.setAttribute('x2', p2.x);
+                    line.setAttribute('y2', p2.y);
+                    line.setAttribute('class', 'connecting-line matched-line');
+                    svg.appendChild(line);
+                }
+            });
+        }
+
+        function drawAct2ActiveDragLine(start, end) {
+            updateAct2SvgOverlay();
+            const svg = document.getElementById('act2-svg-overlay');
+            const dragLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            dragLine.setAttribute('x1', start.x);
+            dragLine.setAttribute('y1', start.y);
+            dragLine.setAttribute('x2', end.x);
+            dragLine.setAttribute('y2', end.y);
+            dragLine.setAttribute('class', 'connecting-line active-drag');
+            svg.appendChild(dragLine);
+        }
+
+        function evaluateAct2Completion() {
+            const act2MaxAllowedFails = 5;
+
+            if (act2TotalFails > act2MaxAllowedFails) {
+                showMasterModal(
+                    "¡Actividad 2 con muchas fallas!",
+                    `Tuviste <b>${act2TotalFails}</b> fallas en la segunda actividad. Vamos a repetir esta actividad para dominarla por completo. 💪`,
+                    "Repetir Actividad 2 🔁",
+                    "🔁",
+                    () => { initAct2(); }
+                );
+                speakLatinSpanish("Tuviste demasiadas fallas en la segunda actividad. Vamos a repetirla para practicar juntos.");
+            } else {
+                showMasterModal(
+                    "¡Juego Completado con Éxito! 🏆",
+                    `¡Felicidades! Has completado tanto la Actividad 1 como la Actividad 2 con un total de <b>${act2TotalFails}</b> fallas en la segunda fase. ¡Lo has hecho excelente!<br><br>¿Deseas iniciar nuevamente el juego desde el principio?`,
+                    "Iniciar Nuevamente el Juego 🚀",
+                    "🎉",
+                    () => { initAct1(); }
+                );
+                speakLatinSpanish("¡Felicidades! Has completado todas las actividades con éxito. Iniciamos nuevamente el juego.");
+                confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+            }
+        }
+    </script>
+</body>
+</html>
